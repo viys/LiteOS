@@ -1,27 +1,55 @@
-# 设置所需的 CMake 最低版本
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
 
-# 定义项目名称和使用的语言
-project(template C)
+# C99
+set(CMAKE_C_FLAGS "-std=c99")
 
-# 设定 C 标准为 C99
-set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
+# Project name
+set(PROJECT_NAME "template")
+project(${PROJECT_NAME})
 
-# 添加可执行文件，并指定源文件
-add_executable(${PROJECT_NAME}
-    src/main.c
-)
+# Scripts and release directories
+set(KCONFIG_DIR "${CMAKE_SOURCE_DIR}/scripts/kconfig")
+set(RELEASE_DIR "${CMAKE_SOURCE_DIR}/release")
+set(KCONFIG_CONFIG_H "my_config.h")
 
-# 仅对当前目标生效的头文件路径
-target_include_directories(${PROJECT_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
+# Create release directory if it doesn't exist (host build)
+file(MAKE_DIRECTORY ${RELEASE_DIR})
 
-# 基础警告选项（可按需调整）
-if (MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /W4)
-else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+# Custom target: menuconfig
+if(CMAKE_HOST_WIN32)
+    add_custom_target(
+        menuconfig
+        WORKING_DIRECTORY ${RELEASE_DIR}
+        COMMAND menuconfig.exe ${KCONFIG_DIR}/Kconfig
+        COMMAND python ${KCONFIG_DIR}/kconfig.py ${KCONFIG_DIR}/Kconfig .config ${RELEASE_DIR}/${KCONFIG_CONFIG_H} ${RELEASE_DIR}/log.txt ${RELEASE_DIR}/.config
+        COMMENT "Running menuconfig"
+    )
+elseif(CMAKE_HOST_APPLE)
+    add_custom_target(
+        menuconfig
+        WORKING_DIRECTORY ${RELEASE_DIR}
+        COMMAND menuconfig.exe ${KCONFIG_DIR}/Kconfig
+        COMMAND python3 ${KCONFIG_DIR}/kconfig.py ${KCONFIG_DIR}/Kconfig .config ${RELEASE_DIR}/${KCONFIG_CONFIG_H} ${RELEASE_DIR}/log.txt ${RELEASE_DIR}/.config
+        COMMENT "Running menuconfig"
+    )
+elseif(CMAKE_HOST_UNIX)
+    add_custom_target(
+        menuconfig
+        WORKING_DIRECTORY ${RELEASE_DIR}
+        COMMAND kconfig-mconf ${KCONFIG_DIR}/Kconfig
+        COMMAND python3 ${KCONFIG_DIR}/kconfig.py ${KCONFIG_DIR}/Kconfig .config ${RELEASE_DIR}/${KCONFIG_CONFIG_H} ${RELEASE_DIR}/log.txt ${RELEASE_DIR}/.config
+        COMMENT "Running menuconfig"
+    )
 endif()
+
+# Source files
+file(GLOB_RECURSE SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/project/app/main.c
+)
+
+add_executable(${PROJECT_NAME} ${SOURCES})
+
+# Include release/ so that my_config.h is found
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/release
+)
