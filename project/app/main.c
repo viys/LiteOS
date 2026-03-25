@@ -9,7 +9,6 @@
  */
 
 #include <windows.h>
-#include "my_config.h"
 #include "os.h"
 
 /* ========== 定时器 ID ========== */
@@ -67,18 +66,8 @@ static void on_key_event(void* param)
     printf("[EVENT] key pressed: %d\n", key);
 }
 
-int main(int argc, char *argv[])
+int main(void)
 {
-    printf("Application : %s\n", CONFIG_APP_NAME);
-    printf("Version     : %d.%d.%d\n",
-           CONFIG_APP_VERSION_MAJOR,
-           CONFIG_APP_VERSION_MINOR,
-           CONFIG_APP_VERSION_PATCH);
-
-#if CONFIG_DEBUG_ENABLE
-    printf("[DEBUG] Debug mode enabled (level %d)\n", CONFIG_DEBUG_LEVEL);
-#endif
-
     /* -------- 初始化 OS -------- */
     os_init();
 
@@ -109,10 +98,11 @@ int main(int argc, char *argv[])
     /* -------- 主循环 -------- */
     while (1) {
         /*
-         * GetTickCount() 返回 ms，乘 1000 转换为 us 传入 os_run。
-         * 在单片机上可直接传入硬件定时器的 us 计数值。
+         * GetTickCount() 返回 ms，直接传入 os_run。
+         * OS 内部不做单位转换，传入什么单位就用什么单位。
+         * 在单片机上可直接传入硬件定时器的计数值（us / ms / 其他）。
          */
-        os_run(GetTickCount() * 1000);
+        os_run(GetTickCount());
         Sleep(1);   /* 降低 CPU 占用 */
     }
 

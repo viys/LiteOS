@@ -1,236 +1,125 @@
-# cmake_template
+# LiteOS
 
-基于 CMake 和 Kconfig 的 C 工程模板，集成了 `menuconfig` 可视化配置界面，支持 Windows 和 Linux。
+LiteOS 是一个基于 C 语言实现的轻量级 OS 示例工程，当前项目聚焦于三个核心能力：
 
----
+- 事件系统：支持事件注册、投递与派发
+- 软件定时器：支持单次和循环定时回调
+- 协作式任务调度：支持按周期与优先级执行任务
 
-## 目录
+项目使用 CMake 组织构建，适合作为轻量级调度内核、裸机框架或教学演示工程的基础。
 
-1. [简介](#简介)
-2. [目录结构](#目录结构)
-3. [Kconfig 配置项说明](#kconfig-配置项说明)
-4. [环境配置](#环境配置)
-5. [使用方法](#使用方法)
-6. [常见问题](#常见问题)
-7. [参考资料](#参考资料)
+## 项目特点
 
----
-
-## 简介
-
-本模板在标准 CMake 工程基础上集成了 Kconfig 配置系统，可通过 `menuconfig` 图形界面管理编译宏，生成 `my_config.h` 供源码直接引用。适合需要灵活管理功能开关和参数的 C 项目。
-
-主要特性：
-
-- `Kconfig` 配置文件定义配置项
-- `menuconfig` 图形化配置界面（Windows / Linux 均支持）
-- `kconfig.py` 脚本自动生成 `release/my_config.h`
-- CMake 自定义 `menuconfig` 构建目标
-- PowerShell 脚本（`build.ps1`）一键完成配置与构建
-
----
-
+- `os_init()` 统一初始化事件、定时器和任务子系统
+- `os_run(timestamp)` 作为系统主循环入口，驱动整个调度流程
+- 支持外部传入时间戳，便于适配 PC 模拟或 MCU 硬件定时器
+- 代码结构清晰，适合继续扩展消息机制、延时任务、优先级策略等能力
 ## 目录结构
 
 ```text
-cmake_template/
-├── CMakeLists.txt           # 根构建脚本，含 menuconfig 目标
-├── build.ps1                # Windows PowerShell 构建脚本
+LiteOS/
+├── CMakeLists.txt          # 根构建脚本
+├── build.ps1               # Windows 下的构建辅助脚本
 ├── project/
-│   └── app/
-│       └── main.c           # 应用入口，引用 my_config.h
-├── release/                 # 配置输出目录（由 .gitignore 忽略）
-│   ├── .config              # menuconfig 保存的配置
-│   └── my_config.h          # 由 kconfig.py 自动生成的头文件
-└── scripts/
-    └── kconfig/
-        ├── Kconfig           # 配置菜单定义
-        ├── kconfig.py        # 解析 Kconfig 并生成头文件
-        └── win-tools/        # Windows menuconfig 工具（mconf-idf.exe 等）
+│   ├── app/
+│   │   └── main.c          # LiteOS 示例入口
+│   └── os/
+│       ├── os.h            # LiteOS 统一入口头文件
+│       ├── os.c            # OS 主调度实现
+│       ├── os_config.h     # OS 配置项
+│       ├── os_type.h       # 公共类型定义
+│       ├── event.h/.c      # 事件系统
+│       ├── timer.h/.c      # 软件定时器
+│       └── task.h/.c       # 协作式任务调度
+├── build/                  # CMake 构建输出目录
+├── release/                # 预留输出目录
+└── scripts/                # 辅助脚本目录
 ```
 
----
+## 核心运行流程
 
-## Kconfig 配置项说明
-
-当前模板包含以下配置项（可在 `scripts/kconfig/Kconfig` 中扩展）：
-
-```kconfig
-mainmenu "Template Project Configuration"
-
-menu "Application Settings"
-config APP_NAME            # 应用名称（string）
-config APP_VERSION_MAJOR   # 主版本号（int）
-config APP_VERSION_MINOR   # 次版本号（int）
-config APP_VERSION_PATCH   # 修订号（int）
-endmenu
-
-menu "Debug Settings"
-config DEBUG_ENABLE        # 调试开关（bool）
-config DEBUG_LEVEL         # 调试级别 1-3（int，仅 DEBUG_ENABLE=y 时可见）
-endmenu
-```
-
-生成的 `release/my_config.h` 示例：
+LiteOS 的主循环入口为：
 
 ```c
-#define CONFIG_APP_NAME "my_app"
-#define CONFIG_APP_VERSION_MAJOR 1
-#define CONFIG_APP_VERSION_MINOR 0
-#define CONFIG_APP_VERSION_PATCH 0
+os_init();
+
+while (1) {
+    os_run(get_timestamp());
+}
 ```
 
-在源码中使用：
+`os_run()` 当前执行顺序如下：
+
+1. 更新系统 tick
+2. 检查并执行到期定时器
+3. 运行到期任务（若启用 `OS_USE_TASK`）
+4. 派发事件队列中的全部事件
+
+这种设计非常适合裸机、轮询式循环或桌面模拟环境。
+
+## 当前示例内容
+
+[`project/app/main.c`](/c:/Users/jiyon/workspace/github/cmake_template/project/app/main.c) 中演示了 LiteOS 的典型用法：
+
+- 创建两个循环定时器：`500ms` 和 `1s`
+- 创建两个周期任务：
+  - `500ms` 模拟 LED 翻转
+  - `2000ms` 打印系统 tick
+- 注册并投递一个按键事件 `EVT_KEY`
+- 在 `while (1)` 中持续调用 `os_run(GetTickCount())`
+
+这意味着当前工程更偏向“OS 功能演示工程”，而不是单纯的 CMake 模板项目。
+
+## 配置说明
+
+LiteOS 的核心容量参数位于 [`project/os/os_config.h`](/c:/Users/jiyon/workspace/github/cmake_template/project/os/os_config.h)：
 
 ```c
-#include "my_config.h"
-
-printf("Application : %s\n", CONFIG_APP_NAME);
-printf("Version     : %d.%d.%d\n",
-       CONFIG_APP_VERSION_MAJOR,
-       CONFIG_APP_VERSION_MINOR,
-       CONFIG_APP_VERSION_PATCH);
-
-#if CONFIG_DEBUG_ENABLE
-    printf("[DEBUG] Debug mode enabled (level %d)\n", CONFIG_DEBUG_LEVEL);
-#endif
+#define OS_EVT_QUEUE_SIZE   32
+#define OS_EVT_HANDLER_MAX  32
+#define OS_TIMER_MAX        16
+#define OS_USE_TASK         1
 ```
 
----
+当 `OS_USE_TASK` 为 `1` 时，会额外启用任务调度模块：
 
-## 环境配置
+```c
+#define OS_TASK_MAX         8
+```
+
+如果你想精简系统，只保留“事件 + 定时器”，可以将 `OS_USE_TASK` 改为 `0`。
+
+## 构建方法
 
 ### Windows
 
-**依赖工具：**
+依赖工具：
 
-- [CMake 3.15+](https://cmake.org/download/)
-- [Ninja](https://ninja-build.org/)（推荐）或 MinGW-w64
-- [Python 3.x](https://www.python.org/)
+- CMake 3.15+
+- Ninja
 
-**安装 Python 依赖（只需一次）：**
-
-```powershell
-pip install windows-curses kconfiglib
-```
-
-> `menuconfig.exe` 已随项目一并提供（`scripts/kconfig/win-tools/`），无需额外安装。
-
----
-
-### Linux
-
-**安装依赖：**
-
-```bash
-sudo apt update
-sudo apt install cmake ninja-build gcc python3
-
-# 安装 kconfig 前端工具（二选一）
-# 推荐：kconfig-frontends（提供 kconfig-mconf）
-sudo apt-get install libncurses-dev kconfig-frontends
-
-# 或使用 Python 版本
-sudo apt install python3-kconfiglib
-```
-
----
-
-## 使用方法
-
-### 方式一：PowerShell 脚本（Windows 推荐）
+常用命令：
 
 ```powershell
-# 打开配置菜单，保存后自动生成 my_config.h
-.\build.ps1 menuconfig
-
-# CMake 配置 + 编译（一步完成）
 .\build.ps1 all
-
-# 单独执行 CMake 配置
 .\build.ps1 cmake
-
-# 单独编译
 .\build.ps1 make
-
-# 清理编译产物（保留构建目录）
 .\build.ps1 clean
-
-# 删除整个构建目录
 .\build.ps1 delete
-
-# 查看帮助
-.\build.ps1 help
 ```
 
----
-
-### 方式二：CMake 命令（跨平台）
-
-**Windows（Ninja）：**
+也可以直接使用 CMake：
 
 ```powershell
-# 运行 menuconfig（需已安装 menuconfig.exe 和 Python）
 cmake -S . -B build -G Ninja
-cmake --build build --target menuconfig
-
-# 编译
 cmake --build build
-.\build\template.exe
 ```
 
-**Linux：**
+## 说明
 
-```bash
-cmake -S . -B build
-cmake --build build --target menuconfig
+- 当前 README 与 CMake 工程名已经统一为 `LiteOS`
+- 构建生成的可执行文件会使用 `LiteOS` 作为目标名
 
-cmake --build build
-./build/template
-```
+## License
 
----
-
-### 配置流程说明
-
-1. 执行 `menuconfig` 打开图形配置界面
-2. 修改所需配置项，按 `S` 保存，按 `Q` 退出
-3. `kconfig.py` 自动将 `.config` 转换为 `release/my_config.h`
-4. 重新编译即可使用新配置
-
----
-
-## 常见问题
-
-**Q: Windows 下 menuconfig 显示乱码？**
-
-推荐在 PowerShell 中设置 UTF-8 编码后再运行：
-
-```powershell
-chcp 65001
-.\build.ps1 menuconfig
-```
-
-**Q: `.config` 丢失或配置未生效？**
-
-确保 `menuconfig` 保存退出后 `release/.config` 文件存在，并重新编译。
-
-**Q: `kconfig.py` 报错找不到 kconfiglib？**
-
-```powershell
-pip install kconfiglib
-```
-
-**Q: Linux 下提示找不到 `kconfig-mconf`？**
-
-```bash
-sudo apt-get install kconfig-frontends
-```
-
----
-
-## 参考资料
-
-- [Kconfig 官方文档](https://www.kernel.org/doc/html/latest/kbuild/kconfig-language.html)
-- [Kconfiglib PyPI](https://pypi.org/project/kconfiglib/)
-- [Kconfig 集成教程（博客）](https://www.cnblogs.com/fluidog/p/15176680.html)
+本项目使用 MIT License，详见 [`LICENSE`](/c:/Users/jiyon/workspace/github/cmake_template/LICENSE)。

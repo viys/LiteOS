@@ -13,12 +13,12 @@
  * @code
  * os_init();
  * while (1) {
- *     os_run(get_timestamp_us());   // 传入当前时间戳（us）
+ *     os_run(get_tick());   // 传入当前时间戳
  * }
  * @endcode
  *
  * @par os_run 内部执行顺序
- * 1. os_tick_update  → 接收 us 时间戳，累加转换为 ms 系统 tick
+ * 1. os_tick_update  → 接收外部时间戳，累加为系统 tick
  * 2. os_timer_tick   → 检查定时器到期 → 执行回调
  * 3. os_task_run     → 调度到期任务 → 按优先级执行
  * 4. event dispatch  → 取出并派发所有待处理事件
@@ -48,6 +48,6 @@ void os_init(void);
  * 每次主循环迭代调用一次，驱动整个 OS 运转。
  * 内部依次执行：tick 更新 → 定时器检查 → 任务调度 → 事件派发。
  *
- * @param timestamp_us 外部时间源的当前时间戳（单位：微秒 us）
+ * @param timestamp 外部时间源的当前时间戳（单位由调用者决定）
  */
-void os_run(uint32_t timestamp_us);
+void os_run(uint32_t timestamp);

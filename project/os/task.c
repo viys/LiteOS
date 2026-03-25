@@ -21,7 +21,7 @@
 /** @brief 任务槽位结构（内部使用） */
 typedef struct {
     os_task_fn    handler;      /**< 任务函数 */
-    uint32_t      period_ms;    /**< 执行周期（ms） */
+    uint32_t      period;       /**< 执行周期 */
     uint32_t      deadline;     /**< 下次执行的 tick 值 */
     uint8_t       priority;     /**< 优先级（0 = 最高） */
     bool          active;       /**< 是否激活 */
@@ -36,7 +36,7 @@ void os_task_init(void)
 }
 
 os_err_t os_task_create(uint8_t id, os_task_fn handler,
-                        uint32_t period_ms, uint8_t priority)
+                        uint32_t period, uint8_t priority)
 {
     if (id >= OS_TASK_MAX) {
         return OS_ERR_INVALID;
@@ -44,8 +44,8 @@ os_err_t os_task_create(uint8_t id, os_task_fn handler,
 
     task_slot_t* t = &task_pool[id];
     t->handler    = handler;
-    t->period_ms  = period_ms;
-    t->deadline   = os_get_tick() + period_ms;
+    t->period    = period;
+    t->deadline  = os_get_tick() + period;
     t->priority   = priority;
     t->active     = true;
     t->used       = true;
@@ -69,7 +69,7 @@ os_err_t os_task_resume(uint8_t id)
     }
 
     /* 以当前 tick 为基准重新开始计时，避免恢复后立即触发 */
-    task_pool[id].deadline = os_get_tick() + task_pool[id].period_ms;
+    task_pool[id].deadline = os_get_tick() + task_pool[id].period;
     task_pool[id].active   = true;
 
     return OS_OK;
@@ -113,7 +113,7 @@ void os_task_run(void)
         best->handler();
 
         /* 重载下次执行时刻（基于 deadline 而非当前 tick，避免累积误差） */
-        best->deadline += best->period_ms;
+        best->deadline += best->period;
     }
 }
 

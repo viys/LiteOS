@@ -7,7 +7,7 @@
  * - 优先级调度：数值越小优先级越高，到期任务按优先级顺序执行
  * - 挂起/恢复：动态控制任务的运行状态
  *
- * 时间单位：毫秒（ms）
+ * 时间单位由外部传入 os_tick_update() 的时间戳决定，OS 内部不做单位转换。
  *
  * @note 这是协作式调度，不是抢占式。每个任务函数必须尽快返回，
  *       不能在任务中长时间阻塞，否则会影响其他任务和事件的处理。
@@ -41,12 +41,12 @@ void os_task_init(void);
  *
  * @param id        任务 ID（0 ~ OS_TASK_MAX-1，由调用者分配）
  * @param handler   任务函数
- * @param period_ms 执行周期（毫秒）
+ * @param period    执行周期（单位与 os_tick_update 传入的时间戳一致）
  * @param priority  优先级（0 = 最高，数值越大优先级越低）
  * @return OS_OK 成功，OS_ERR_INVALID ID 越界
  */
 os_err_t os_task_create(uint8_t id, os_task_fn handler,
-                        uint32_t period_ms, uint8_t priority);
+                        uint32_t period, uint8_t priority);
 
 /**
  * @brief 挂起任务

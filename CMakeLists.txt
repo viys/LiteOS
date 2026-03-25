@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.15)
 set(CMAKE_C_FLAGS "-std=c99")
 
 # Project name
-set(PROJECT_NAME "template")
+set(PROJECT_NAME "LiteOS")
 project(${PROJECT_NAME})
 
 # Scripts and release directories

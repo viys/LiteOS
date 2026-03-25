@@ -17,12 +17,12 @@ void os_init(void)
 #endif
 }
 
-void os_run(uint32_t timestamp_us)
+void os_run(uint32_t timestamp)
 {
     os_event_t evt;
 
-    /* 1. 更新系统 tick（us 输入 → 内部转换为 ms） */
-    os_tick_update(timestamp_us);
+    /* 1. 更新系统 tick */
+    os_tick_update(timestamp);
 
     /* 2. 检查定时器：到期的定时器会执行回调 */
     os_timer_tick();

@@ -14,9 +14,9 @@
  * @endcode
  * 这种方法天然支持 32 位溢出回绕，无需特殊处理。
  *
- * @par 时间单位转换
- * os_tick_update() 接收 us 时间戳，内部累加 us 残余并转换为 ms 存入 sys_tick。
- * 定时器 interval 和 deadline 均以 ms 为单位。
+ * @par 时间单位
+ * OS 不强制时间单位，传入 os_tick_update() 的时间戳是什么单位，
+ * 所有 interval / deadline / period 就是什么单位。
  */
 
 #include "timer.h"
@@ -27,14 +27,14 @@ typedef struct {
     os_timer_cb callback;       /**< 到期回调函数 */
     void*       param;          /**< 回调参数 */
     uint8_t     type;           /**< 定时器类型：OS_TIMER_ONCE / OS_TIMER_LOOP */
-    uint32_t    interval_ms;    /**< 定时间隔（ms） */
-    uint32_t    deadline;       /**< 下次到期的 tick 值（ms） */
+    uint32_t    interval;       /**< 定时间隔 */
+    uint32_t    deadline;       /**< 下次到期的 tick 值 */
     bool        active;         /**< 是否正在运行 */
     bool        used;           /**< 该槽位是否已被创建 */
 } timer_slot_t;
 
 static timer_slot_t timer_pool[OS_TIMER_MAX];   /**< 定时器池 */
-static uint32_t     sys_tick;                    /**< 系统 tick（ms） */
+static uint32_t     sys_tick;                    /**< 系统 tick */
 
 void os_timer_init(void)
 {
@@ -47,36 +47,30 @@ uint32_t os_get_tick(void)
     return sys_tick;
 }
 
-void os_tick_update(uint32_t timestamp_us)
+void os_tick_update(uint32_t timestamp)
 {
-    static uint32_t pre_us    = 0;
-    static uint32_t residue   = 0;  /* us 残余（不足 1ms 的部分） */
-    static bool     first     = true;
+    static uint32_t pre_tick = 0;
+    static bool     first    = true;
 
     /* 首次调用：记录基准时间戳，不产生 tick 增量 */
     if (first) {
-        pre_us = timestamp_us;
-        first  = false;
+        pre_tick = timestamp;
+        first    = false;
         return;
     }
 
     /*
-     * 计算 us 差值（无符号减法天然处理溢出）
+     * 计算差值（无符号减法天然处理溢出）
      * 例: 当 timestamp 从 0xFFFFFFFF 回绕到 0 时，
      *     (0 - 0xFFFFFFFF) 在无符号运算中等于 1，结果正确。
      */
-    uint32_t delta_us = timestamp_us - pre_us;
-    pre_us = timestamp_us;
+    uint32_t delta = timestamp - pre_tick;
+    pre_tick = timestamp;
 
-    /* 累加残余 us，满 1000us 则转换为 1ms */
-    residue += delta_us;
-    uint32_t delta_ms = residue / 1000;
-    residue %= 1000;
-
-    sys_tick += delta_ms;
+    sys_tick += delta;
 }
 
-os_err_t os_timer_create(uint8_t id, uint8_t type, uint32_t interval_ms,
+os_err_t os_timer_create(uint8_t id, uint8_t type, uint32_t interval,
                          os_timer_cb callback, void* param)
 {
     if (id >= OS_TIMER_MAX) {
@@ -87,7 +81,7 @@ os_err_t os_timer_create(uint8_t id, uint8_t type, uint32_t interval_ms,
     t->callback    = callback;
     t->param       = param;
     t->type        = type;
-    t->interval_ms = interval_ms;
+    t->interval = interval;
     t->active      = false;
     t->used        = true;
 
@@ -101,7 +95,7 @@ os_err_t os_timer_start(uint8_t id)
     }
 
     /* 以当前 tick 为基准，计算首次到期时刻 */
-    timer_pool[id].deadline = sys_tick + timer_pool[id].interval_ms;
+    timer_pool[id].deadline = sys_tick + timer_pool[id].interval;
     timer_pool[id].active   = true;
 
     return OS_OK;
@@ -153,7 +147,7 @@ void os_timer_tick(void)
 
         if (t->type == OS_TIMER_LOOP) {
             /* 循环定时器：基于上次 deadline 重载（避免累积误差） */
-            t->deadline += t->interval_ms;
+            t->deadline += t->interval;
         } else {
             /* 单次定时器：自动停止 */
             t->active = false;
