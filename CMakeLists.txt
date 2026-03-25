@@ -45,6 +45,7 @@ endif()
 # Source files
 file(GLOB_RECURSE SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/project/app/main.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/project/os/*.c
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -52,4 +53,5 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 # Include release/ so that my_config.h is found
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/release
+    ${CMAKE_CURRENT_SOURCE_DIR}/project/os
 )
