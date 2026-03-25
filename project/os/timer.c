@@ -4,7 +4,6 @@ uint32_t u32_tick = 0;
 
 uint32_t os_get_system_tick(void)
 {
-    os_time_run();
     return u32_tick;
 }
 
@@ -22,12 +21,11 @@ uint8_t os_time_exceed(uint64_t ref, uint32_t span_us)
     return ret;
 }
 
-void os_time_run(void)
+void os_time_run(uint32_t timestamp)
 {
     static uint32_t pre_tick = 0;
 
-    uint32_t cur_tick = 0;
-    // uint32_t cur_tick = REG_RD(0x42000104);// (SYS_CTRL->AON_RTC);
+    uint32_t cur_tick = timestamp;
 
     if (cur_tick >= pre_tick) {
         u32_tick += (cur_tick - pre_tick);

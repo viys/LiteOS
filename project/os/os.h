@@ -4,4 +4,4 @@
 #include "timer.h"
 #include "event.h"
 
-bool os_while(void);
+bool os_while(uint32_t timestamp);

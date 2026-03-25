@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
         // 任务轮询
         // DWORD ms = GetTickCount();
         // printf("%d\r\n", ms);
-        os_while();
+        os_while(0);
     }
 
     return 0;

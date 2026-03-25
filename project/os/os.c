@@ -1,10 +1,10 @@
 #include "os.h"
 
-bool os_while(void)
+bool os_while(uint32_t timestamp)
 {
-    os_event_t evt;
+    static os_event_t evt;
 
-    os_time_run();
+    os_time_run(timestamp);
 
     if (os_event_get(&evt)) {
         os_event_dispatch(&evt);

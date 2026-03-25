@@ -15,4 +15,5 @@ typedef struct {
     void* param;
 } os_timer_t;
 
-void os_time_run(void);
+void os_time_run(uint32_t timestamp);
+
