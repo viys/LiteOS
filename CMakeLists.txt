@@ -7,37 +7,33 @@ set(CMAKE_C_FLAGS "-std=c99")
 set(PROJECT_NAME "LiteOS")
 project(${PROJECT_NAME})
 
-# Scripts and release directories
+# Scripts and build output directories
 set(KCONFIG_DIR "${CMAKE_SOURCE_DIR}/scripts/kconfig")
-set(RELEASE_DIR "${CMAKE_SOURCE_DIR}/release")
 set(KCONFIG_CONFIG_H "my_config.h")
 
-# Create release directory if it doesn't exist (host build)
-file(MAKE_DIRECTORY ${RELEASE_DIR})
-
-# Custom target: menuconfig
+# Custom target: menuconfig (outputs to build directory)
 if(CMAKE_HOST_WIN32)
     add_custom_target(
         menuconfig
-        WORKING_DIRECTORY ${RELEASE_DIR}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMAND menuconfig.exe ${KCONFIG_DIR}/Kconfig
-        COMMAND python ${KCONFIG_DIR}/kconfig.py ${KCONFIG_DIR}/Kconfig .config ${RELEASE_DIR}/${KCONFIG_CONFIG_H} ${RELEASE_DIR}/log.txt ${RELEASE_DIR}/.config
+        COMMAND python ${KCONFIG_DIR}/kconfig.py ${KCONFIG_DIR}/Kconfig .config ${CMAKE_BINARY_DIR}/${KCONFIG_CONFIG_H} ${CMAKE_BINARY_DIR}/log.txt ${CMAKE_BINARY_DIR}/.config
         COMMENT "Running menuconfig"
     )
 elseif(CMAKE_HOST_APPLE)
     add_custom_target(
         menuconfig
-        WORKING_DIRECTORY ${RELEASE_DIR}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMAND menuconfig.exe ${KCONFIG_DIR}/Kconfig
-        COMMAND python3 ${KCONFIG_DIR}/kconfig.py ${KCONFIG_DIR}/Kconfig .config ${RELEASE_DIR}/${KCONFIG_CONFIG_H} ${RELEASE_DIR}/log.txt ${RELEASE_DIR}/.config
+        COMMAND python3 ${KCONFIG_DIR}/kconfig.py ${KCONFIG_DIR}/Kconfig .config ${CMAKE_BINARY_DIR}/${KCONFIG_CONFIG_H} ${CMAKE_BINARY_DIR}/log.txt ${CMAKE_BINARY_DIR}/.config
         COMMENT "Running menuconfig"
     )
 elseif(CMAKE_HOST_UNIX)
     add_custom_target(
         menuconfig
-        WORKING_DIRECTORY ${RELEASE_DIR}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMAND kconfig-mconf ${KCONFIG_DIR}/Kconfig
-        COMMAND python3 ${KCONFIG_DIR}/kconfig.py ${KCONFIG_DIR}/Kconfig .config ${RELEASE_DIR}/${KCONFIG_CONFIG_H} ${RELEASE_DIR}/log.txt ${RELEASE_DIR}/.config
+        COMMAND python3 ${KCONFIG_DIR}/kconfig.py ${KCONFIG_DIR}/Kconfig .config ${CMAKE_BINARY_DIR}/${KCONFIG_CONFIG_H} ${CMAKE_BINARY_DIR}/log.txt ${CMAKE_BINARY_DIR}/.config
         COMMENT "Running menuconfig"
     )
 endif()

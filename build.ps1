@@ -76,18 +76,17 @@ function Invoke-Delete {
 }
 
 function Invoke-Menuconfig {
-    $releaseDir = Join-Path $rootPath "release"
     $kconfigDir = Join-Path $rootPath "scripts/kconfig"
-    $configH    = Join-Path $releaseDir "my_config.h"
-    $logTxt     = Join-Path $releaseDir "log.txt"
-    $dotConfig  = Join-Path $releaseDir ".config"
+    $configH    = Join-Path $buildDir "my_config.h"
+    $logTxt     = Join-Path $buildDir "log.txt"
+    $dotConfig  = Join-Path $buildDir ".config"
 
-    if (-not (Test-Path $releaseDir)) {
-        New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
+    if (-not (Test-Path $buildDir)) {
+        New-Item -ItemType Directory -Force -Path $buildDir | Out-Null
     }
 
     Write-Host ">>> 运行 menuconfig" -ForegroundColor Cyan
-    Push-Location $releaseDir
+    Push-Location $buildDir
     try {
         menuconfig.exe (Join-Path $kconfigDir "Kconfig")
         if ($LASTEXITCODE -ne 0) {
